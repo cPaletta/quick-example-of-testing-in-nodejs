@@ -1,33 +1,48 @@
 # This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+# .github/workflows/ci-pipeline.yml
 
-name: Node.js CI
+name: CI Pipeline for ino_dev
 
+# Ten workflow będzie uruchamiany przy każdym pushu do gałęzi ino_dev
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches:
+      - ino_dev
 
 jobs:
-  build:
+  build-and-test:
+    # Używamy najnowszej dostępnej maszyny wirtualnej z Ubuntu
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x, 22.x]
-
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Use Node.js ${{ matrix.node-version }}
+      # Krok 1: Klonowanie repozytorium (odpowiednik "stage('Klonowanie repozytorium')")
+      # Używamy gotowej akcji "actions/checkout" do pobrania kodu.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Krok 2: Ustawienie środowiska Node.js
+      # Zastępuje to konieczność budowania własnego obrazu Docker z Node.js (Dockerfile.build)
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: '10' # Wersja Node.js z Twojego Dockerfile
 
+      # Krok 3: Instalacja zależności (odpowiednik części "RUN npm install" z Dockerfile.build)
+      # Wykonujemy komendy bezpośrednio na runnerze.
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Run tests
-        run: npm test
+      # Krok 4: Uruchomienie testów i generowanie raportu pokrycia
+      # Odpowiednik "stage('Test')" i komend z "Dockerfile.test"
+      - name: Run tests and generate coverage
+        run: npm run test # Zakładając, że skrypt "test" w package.json uruchamia też "cover"
+
+      # Krok 5: Archiwizacja artefaktów (odpowiednik "stage('Publish')")
+      # Używamy gotowej akcji do spakowania i załączenia raportów z testów
+      # jako artefaktu do pobrania.
+      - name: Archive test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports # Nazwa artefaktu
+          path: reports/ # Ścieżka do katalogu, który ma być zarchiwizowany
